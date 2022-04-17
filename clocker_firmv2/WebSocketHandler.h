@@ -6,6 +6,7 @@ SocketIOclient io;
 
 bool isSocketActive = false;
 bool isDocumentReceived = false;
+bool isNotAlreadyTimeOut = true; // use to prevent re initialization of document receiving task
 bool isAssignEventAcknowledge = false;
 bool isServerNotifiedCellIsFree = false;
 

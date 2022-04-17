@@ -28,6 +28,7 @@ void startVerifyCode();
 void afterVerification();
 bool beforeAwaitDocumentReceive();
 void awaitDocumentReceive();
+void afterAwaitDocumentReceive();
 bool beforeAwaitDoorToClose();
 void awaitDoorToClose();
 void afterAwaitDoorToClose();
@@ -65,7 +66,7 @@ Task tAwaitAssignToServer(5 * TASK_SECOND, TASK_FOREVER, &awaitAssignToServer, &
 Task tDisplayWaitingCode(TASK_IMMEDIATE, TASK_FOREVER, NULL, &sc, false, &enableScanningEvent, &disableScanningEvent);
 Task tScanRoutine(TASK_IMMEDIATE, TASK_FOREVER, &startScanRoutine, &sc, false, NULL, &afterScanning);
 Task tVerifyCode(500 * TASK_MILLISECOND, TASK_FOREVER, &startVerifyCode, &sc, false, NULL, &afterVerification);
-Task tAwaitDocumentReceive(100 * TASK_MILLISECOND, TASK_FOREVER, &awaitDocumentReceive, &sc, false, &beforeAwaitDocumentReceive, NULL);
+Task tAwaitDocumentReceive(1000 * TASK_MILLISECOND, TASK_FOREVER, &awaitDocumentReceive, &sc, false, &beforeAwaitDocumentReceive, &afterAwaitDocumentReceive);
 Task tAwaitDoorClosing(TASK_IMMEDIATE, TASK_FOREVER, &awaitDoorToClose, &sc, false, &beforeAwaitDoorToClose, &afterAwaitDoorToClose);
 Task tAwaitDoorOpening(TASK_IMMEDIATE, TASK_FOREVER, &awaitDoorToOpen, &sc, false, NULL, &afterAwaitDoorToOpen);
 Task tNoifyCellIsFree(200 * TASK_MILLISECOND, TASK_FOREVER, &notifyCellIsFree, &sc, false, &beforeNotifyCellIsFree, &afterNotifyCellIsFree);
@@ -117,10 +118,6 @@ void setup() {
     // WEB SOCKET CONNECTION
     initWebSocketConnection();
 
-    // initilalize periherals and devices
-    initScanner(); // start scanning peripherals
-    initLocks(); // check locks and initialize
-
     // set high priority task scheduler
     sc.setHighPriorityScheduler(&hpr);
   }
@@ -132,51 +129,65 @@ void loop() {
 
 // perform necesserayy task based on last operation logs
 void afterAssignToServer() {
-  OperationLogs opLogs = getOpLogs();
+  if (!WAS_ALREADY_INITIALIZED) {
+    // SO WE SONT INITIALIZE THINGS AGAIN AFTER RECONNECTION
+    WAS_ALREADY_INITIALIZED = true;
 
-  if (opLogs.GLOBAL_STATE != "0" && opLogs.GLOBAL_STATE != "1") {
-    disableScanningEvent(); // we wont trigger scan events since there are pending task
-    CHANGE_ACTION_FLAG = CHANGE_ACTION_FLAG_TYPE.fromScanner;
-    // there are pending operations before
-    if (opLogs.GLOBAL_STATE == "2") {
-      if (opLogs.VALUE != SOCKET_RESPONSE_PAYLOADS.fail) {
+    // initilalize periherals and devices
+    initScanner(); // start scanning peripherals
+    initLocks(); // check locks and initialize
+
+    OperationLogs opLogs = getOpLogs();
+
+    if (opLogs.GLOBAL_STATE != "0" && opLogs.GLOBAL_STATE != "1") {
+      disableScanningEvent(); // we wont trigger scan events since there are pending task
+      CHANGE_ACTION_FLAG = CHANGE_ACTION_FLAG_TYPE.fromScanner;
+      // there are pending operations before
+      if (opLogs.GLOBAL_STATE == "2") {
+        if (opLogs.VALUE != SOCKET_RESPONSE_PAYLOADS.fail) {
+          ACTIVE_CELL_INDEX = getActiveCellIndex();
+          uint8_t cellState = btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX);
+          if (cellState == 1) {
+            // door is close
+            tAwaitDocumentReceive.setTimeout(RECEIVING_DOCUMENT_TIMEOUT * TASK_SECOND);
+            tAwaitDocumentReceive.restart();
+          } else {
+            // door is open
+            tPrintGrabDocuments.setTimeout(4 * TASK_SECOND); // so we dont block updation task
+            tPrintGrabDocuments.restart();
+          }
+        }
+      } else if (opLogs.GLOBAL_STATE == "3") {
+        ACTIVE_CELL_INDEX = getActiveCellIndex();
+        if (opLogs.VALUE == SOCKET_RESPONSE_PAYLOADS.ok) {
+          tPrintGrabDocuments.setTimeout(4 * TASK_SECOND); // so we dont block updation task
+          tPrintGrabDocuments.restart();
+        } else {
+          startNormalTask(); // just start another scanning because door is close
+          //          tAwaitDocumentReceive.setTimeout(RECEIVING_DOCUMENT_TIMEOUT * TASK_SECOND);
+          //          tAwaitDocumentReceive.restart();
+        }
+      } else if (opLogs.GLOBAL_STATE == "4") {
         ACTIVE_CELL_INDEX = getActiveCellIndex();
         uint8_t cellState = btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX);
         if (cellState == 1) {
           // door is close
-          tAwaitDoorOpening.restart();
+          tNoifyCellIsFree.restart();
         } else {
           // door is open
-          tAwaitDocumentReceive.restart();
+          tAwaitDoorClosing.restart();
+        }
+      } else if (opLogs.GLOBAL_STATE == "5") {
+        ACTIVE_CELL_INDEX = getActiveCellIndex();
+        if (opLogs.VALUE == SOCKET_RESPONSE_PAYLOADS.ok) {
+          startNormalTask();
+        } else {
+          tNoifyCellIsFree.restart();
         }
       }
-    } else if (opLogs.GLOBAL_STATE == "3") {
-      ACTIVE_CELL_INDEX = getActiveCellIndex();
-      if (opLogs.VALUE == SOCKET_RESPONSE_PAYLOADS.ok) {
-        tPrintGrabDocuments.setTimeout(4 * TASK_SECOND); // so we dont block updation task
-        tPrintGrabDocuments.restart();
-      } else {
-        tAwaitDocumentReceive.restart();
-      }
-    } else if (opLogs.GLOBAL_STATE == "4") {
-      ACTIVE_CELL_INDEX = getActiveCellIndex();
-      uint8_t cellState = btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX);
-      if (cellState == 1) {
-        // door is close
-        tNoifyCellIsFree.restart();
-      } else {
-        // door is open
-        tAwaitDoorClosing.restart();
-      }
-    } else if (opLogs.GLOBAL_STATE == "5") {
-      if (opLogs.VALUE == SOCKET_RESPONSE_PAYLOADS.ok) {
-        startNormalTask();
-      } else {
-        tNoifyCellIsFree.restart();
-      }
+    } else {
+      startNormalTask();
     }
-  } else {
-    startNormalTask();
   }
 }
 

@@ -17,19 +17,4 @@ void console_error(const char *msg) {
   Serial.println(msg);
 }
 
-//void console_notice(String msg) {
-//  Serial.print("[NOTICE] ");
-//  Serial.println(msg);
-//}
-//
-//void console_warning(String msg) {
-//  Serial.print("[WARN] ");
-//  Serial.println(msg);
-//}
-//
-//void console_error(String msg) {
-//  Serial.print("[ERR] ");
-//  Serial.println(msg);
-//}
-
 #endif

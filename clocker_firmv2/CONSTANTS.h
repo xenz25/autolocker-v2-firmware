@@ -6,6 +6,10 @@ const char * HTTP_RQ_PATH = "http://192.168.100.57:3000/locker/get-requirements"
 //const char * HTTP_RQ_PATH = "https://sanpedronline.herokuapp.com/locker/get-requirements";
 
 const unsigned long PROMPT_INTERVAL = 2000;
+signed int RECEIVING_DOCUMENT_TIMEOUT = 100;
+
+// for op log 
+bool WAS_ALREADY_INITIALIZED = false;
 
 // IR AND SCANNER
 #define IR_OUT 35

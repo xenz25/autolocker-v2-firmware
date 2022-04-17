@@ -33,6 +33,7 @@ void initScanner() {
 }
 
 bool enableScanningEvent() {
+  Serial.println("ACTIVATING SCANNING EVENT");
   GLOBAL_STATE = 0;
   ACTIVE_CELL_INDEX = NON_SELECTABLE_ADDRESS;
   // set back to defaultValue - so we the listener knows we are done
@@ -48,6 +49,7 @@ bool enableScanningEvent() {
 }
 
 void disableScanningEvent() {
+  isNotAlreadyTimeOut = true;
   canStartQRScanning = false;
   isForEvaluation = true;
 }
@@ -58,6 +60,7 @@ void handleEvent(AceButton* irBtn, uint8_t eventType, uint8_t buttonState) {
     case AceButton::kEventPressed:
       Serial.println("pressed");
       if (canStartQRScanning && !isForEvaluation) {
+        Serial.println("DISABLING SCANNING EVENT");
         tDisplayWaitingCode.disable();
 
         /// send a pulse to start scanner

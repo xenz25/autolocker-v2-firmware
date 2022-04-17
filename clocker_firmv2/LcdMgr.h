@@ -35,6 +35,11 @@ void printNormStr(String text, int col, int row, bool clean) {
   lcd.print(text);
 }
 
+void printBlank(int col, int row) {
+  lcd.setCursor(col, row);
+  lcd.write(254);
+}
+
 void printErr(const char* err) {
   printNorm(err, 0, 0, true);
   printNorm("Please Restart..", 0, 1, false);
@@ -113,8 +118,8 @@ void printPleaseWait() {
 
 void printThankYou() {
   LAST_PRINTED_CODE = 9;
-  printNorm("Thank for using", 0, 0, true);
-  printNorm("our service.", 0, 1, false);
+  printNorm("Thank you :)", 0, 0, true);
+  printNorm("Good luck today!", 0, 1, false);
 }
 
 void printLastPrompt() {

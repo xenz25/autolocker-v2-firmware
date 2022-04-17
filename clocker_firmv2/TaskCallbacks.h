@@ -77,7 +77,30 @@ void awaitDocumentReceive() {
       };
       String event = eventBuilder(SOCKET_EVENT_TYPES.message, my_payloads, 1);
       io.sendEVENT(event);
+      signed int remaining = (tAwaitDocumentReceive.untilTimeout() / 1000);
+      if (remaining > -1) {
+        if (remaining <= 9) {
+          printBlank(14, 1);
+        }
+        printNormStr(String(remaining), 13, 1, false);
+      } else {
+        tAwaitDocumentReceive.disable();
+        isNotAlreadyTimeOut = false;
+      }
     }
+  }
+}
+
+void afterAwaitDocumentReceive() {
+  //  tAwaitDoorOpening.restart();
+  if (tAwaitDocumentReceive.timedOut()) {
+    // RESTART
+    Serial.println("RECEIVE TIMED OUT");
+    isNotAlreadyTimeOut = false;
+    GLOBAL_STATE = 0;
+    OperationLogs oplogs = {String(GLOBAL_STATE), "null"};
+    saveOperationLogs(oplogs);
+    tDisplayWaitingCode.restart();
   }
 }
 
@@ -94,6 +117,8 @@ void awaitDoorToOpen() {
   // second argument is 1 since we are sure that the cell is awaiting oeen state
   bool actionState = lockStateManager((ACTIVE_CELL_INDEX + 1), 1);
   if (actionState && btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 0) {
+    OperationLogs oplogs = {String(GLOBAL_STATE), SOCKET_RESPONSE_PAYLOADS.ok};
+    saveOperationLogs(oplogs);
     tAwaitDoorOpening.delay(2 * TASK_SECOND);
     btnHandler.updateOldVal(); // call update to catch new state
     // stop the task
@@ -104,7 +129,8 @@ void awaitDoorToOpen() {
 }
 
 void afterAwaitDoorToOpen() {
-  tAwaitDocumentReceive.restart();
+  tPrintGrabDocuments.setTimeout(4 * TASK_SECOND); // so we dont block updation task
+  tPrintGrabDocuments.restart();
 }
 
 bool beforeAwaitDoorToClose() {
@@ -233,26 +259,30 @@ void handleSIOResponse(uint8_t * response_payload) {
         // WILL UPDATE ACTIVE CELL INDEX VALUE
         updateActiveCellIndex(sioResponse.VALUE);
         // OPEN SPECIFIED CELL
-        tAwaitDoorOpening.restart();
+        tAwaitDocumentReceive.setTimeout(RECEIVING_DOCUMENT_TIMEOUT * TASK_SECOND);
+        tAwaitDocumentReceive.restart();
         OperationLogs oplogs = {String(GLOBAL_STATE), sioResponse.VALUE};
         saveOperationLogs(oplogs);
         saveActiveCellIndex();
       }
     }
   } else if (compare(sioResponse.RESPONSE_TYPE, SOCKET_RESPONSE_TYPES.checkDocStatus)) {
-    tAwaitDocumentReceive.disable(); // stop checking for now
     if (compare(sioResponse.VALUE, SOCKET_RESPONSE_PAYLOADS.ok)) {
       // document was received
-      if (!isDocumentReceived) { // check if needed probably the reason is the server side interval
-        tPrintGrabDocuments.setTimeout(4 * TASK_SECOND); // so we dont block updation task
-        tPrintGrabDocuments.restart();
-        OperationLogs oplogs = {String(GLOBAL_STATE), SOCKET_RESPONSE_PAYLOADS.ok};
-        saveOperationLogs(oplogs);
+      if (!isDocumentReceived) {
+        // await door to open
+        tAwaitDocumentReceive.disable();
+        tAwaitDoorOpening.restart();
       }
-      // run task check door state and show thank you upon door closing
     } else {
-      // restart cheking document if received
-      tAwaitDocumentReceive.restartDelayed(2 * TASK_SECOND);
+      if (isNotAlreadyTimeOut) {
+        // restart cheking document if received
+        tAwaitDocumentReceive.setTimeout(RECEIVING_DOCUMENT_TIMEOUT * TASK_SECOND);
+        tAwaitDocumentReceive.enableIfNot();
+      } else {
+        Serial.println("EVENT TIMED OUT -- UPDATED");
+        tAwaitDocumentReceive.disable();
+      }
     }
   } else if (compare(sioResponse.RESPONSE_TYPE, SOCKET_RESPONSE_TYPES.updateToFree)) {
     // response to cell is free updation
