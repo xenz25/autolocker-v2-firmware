@@ -71,6 +71,7 @@ Task tAwaitDoorClosing(TASK_IMMEDIATE, TASK_FOREVER, &awaitDoorToClose, &sc, fal
 Task tAwaitDoorOpening(TASK_IMMEDIATE, TASK_FOREVER, &awaitDoorToOpen, &sc, false, NULL, &afterAwaitDoorToOpen);
 Task tNoifyCellIsFree(200 * TASK_MILLISECOND, TASK_FOREVER, &notifyCellIsFree, &sc, false, &beforeNotifyCellIsFree, &afterNotifyCellIsFree);
 Task tPrintGrabDocuments(TASK_IMMEDIATE, TASK_FOREVER, &showGrabYourDocuments, &sc, false, NULL, &afterTaskShowGrabDocs);
+Task tPromptPrinter(TASK_IMMEDIATE, TASK_FOREVER, NULL, &sc, false, NULL, NULL);
 
 #include "WebSocketHandler.h"
 
@@ -142,6 +143,10 @@ void afterAssignToServer() {
     if (opLogs.GLOBAL_STATE != "0" && opLogs.GLOBAL_STATE != "1") {
       disableScanningEvent(); // we wont trigger scan events since there are pending task
       CHANGE_ACTION_FLAG = CHANGE_ACTION_FLAG_TYPE.fromScanner;
+      RX_DATA = getSavedRxData(); // use for task awaiting document receive
+
+      Serial.println(opLogs.GLOBAL_STATE);
+      Serial.println(opLogs.VALUE);
       // there are pending operations before
       if (opLogs.GLOBAL_STATE == "2") {
         if (opLogs.VALUE != SOCKET_RESPONSE_PAYLOADS.fail) {
@@ -156,6 +161,8 @@ void afterAssignToServer() {
             tPrintGrabDocuments.setTimeout(4 * TASK_SECOND); // so we dont block updation task
             tPrintGrabDocuments.restart();
           }
+        } else {
+          startNormalTask();
         }
       } else if (opLogs.GLOBAL_STATE == "3") {
         ACTIVE_CELL_INDEX = getActiveCellIndex();
@@ -194,11 +201,10 @@ void afterAssignToServer() {
 void startNormalTask() {
   Serial.println("NO PENDING OPERATIONS WORKING TREE IS CLEAN!");
   GLOBAL_STATE = 0;
-  CHANGE_ACTION_FLAG = CHANGE_ACTION_FLAG_TYPE.defaultValue;
   printNorm("Locker is", 0, 0, true);
   printNorm("ready...", 0, 1, false);
   delay(PROMPT_INTERVAL);
-  tDisplayWaitingCode.enableDelayed(3 * TASK_SECOND);
+  tDisplayWaitingCode.restart();
 }
 
 // placed under high priority scheduler

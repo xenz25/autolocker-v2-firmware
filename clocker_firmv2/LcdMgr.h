@@ -81,9 +81,21 @@ void printVerifyingYourCode() {
   lcdMakeBlink();
 }
 
-void printUnknownCode() {
+bool printUnknownCode() {
   LAST_PRINTED_CODE = 3;
-  printNorm("Unknown Code", 0, 0, true);
+  clDisp();
+  horAPrint("Unknown Code", 0);
+  horAPrint("Provided", 1);
+  lcd.noBlink();
+  return true;
+}
+
+bool printThatDidNotWork() {
+  LAST_PRINTED_CODE = 10;
+  printNorm("That didn't", 0, 0, true);
+  printNorm("work :( ", 0, 1, false);
+  lcd.noBlink();
+  return true;
 }
 
 void printOpeningCell() {
@@ -103,17 +115,20 @@ void printGrabYourDocuments() {
   LAST_PRINTED_CODE = 6;
   printNorm("You can get", 0, 0, true);
   printNorm("your documents.", 0, 1, false);
+  lcdMakeBlink();
 }
 
 void printPleaseCloseTheDoor() {
   LAST_PRINTED_CODE = 7;
   printNorm("Please close", 0, 0, true);
   printNorm("the door...", 0, 1, false);
+  lcdMakeBlink();
 }
 
 void printPleaseWait() {
   LAST_PRINTED_CODE = 8;
   printNorm("Please wait...", 0, 0, true);
+  lcdMakeBlink();
 }
 
 void printThankYou() {

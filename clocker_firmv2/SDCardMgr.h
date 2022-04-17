@@ -8,6 +8,7 @@ const char * CRD_SSID = "/ssid.txt";
 const char * CRD_PASS = "/pass.txt";
 const char * OP_LOGS = "/opLogs.txt";
 const char * ACTIVE_C_INDEX = "/cellIdx.txt";
+const char * RX_DATA_FILE = "/verifiedRxData.txt";
 
 // SOCKET ARGS
 const char * SOCK_CONFIG = "/sockConfig.txt";
@@ -122,5 +123,16 @@ int getActiveCellIndex(){
 bool saveActiveCellIndex(){
   String cellIndex = String(ACTIVE_CELL_INDEX);
   bool result = writeFile(SD_MMC, ACTIVE_C_INDEX, cellIndex.c_str());
+  return result;
+}
+
+String getSavedRxData(){
+  String savedRxData = readFile(SD_MMC, RX_DATA_FILE);
+  savedRxData = (savedRxData == NULL_RTR) ? "" : savedRxData;
+  return savedRxData;
+}
+
+bool saveRxData(){
+  bool result = writeFile(SD_MMC, RX_DATA_FILE, RX_DATA.c_str());
   return result;
 }

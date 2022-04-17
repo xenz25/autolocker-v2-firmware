@@ -1,4 +1,8 @@
 
+void restartCallBack() {
+  tDisplayWaitingCode.restart();
+}
+
 void startScanRoutine() {
   if (tScanRoutine.isFirstIteration()) {
     // you can disable other non important task here
@@ -73,9 +77,10 @@ void awaitDocumentReceive() {
     // send a message event with verify message type
     if (!isDocumentReceived) {
       Dictionary my_payloads[] = {
-        {"type", SOCKET_MSG_TYPES.checkDocStatus}// you must send here the cell number
+        {"type", SOCKET_MSG_TYPES.checkDocStatus},
+        {"data", RX_DATA} // send this data because we are sure that this is verified
       };
-      String event = eventBuilder(SOCKET_EVENT_TYPES.message, my_payloads, 1);
+      String event = eventBuilder(SOCKET_EVENT_TYPES.message, my_payloads, 2);
       io.sendEVENT(event);
       signed int remaining = (tAwaitDocumentReceive.untilTimeout() / 1000);
       if (remaining > -1) {
@@ -100,7 +105,10 @@ void afterAwaitDocumentReceive() {
     GLOBAL_STATE = 0;
     OperationLogs oplogs = {String(GLOBAL_STATE), "null"};
     saveOperationLogs(oplogs);
-    tDisplayWaitingCode.restart();
+    tPromptPrinter.setOnEnable(&printThatDidNotWork);
+    tPromptPrinter.setOnDisable(&restartCallBack);
+    tPromptPrinter.setTimeout(2 * TASK_SECOND);
+    tPromptPrinter.restart();
   }
 }
 
@@ -250,11 +258,13 @@ void handleSIOResponse(uint8_t * response_payload) {
       GLOBAL_STATE = 2;
 
       if (compare(sioResponse.VALUE, SOCKET_RESPONSE_PAYLOADS.fail)) {
-        printUnknownCode();
         Serial.println("UNKNOWN CODE");
-        tDisplayWaitingCode.restartDelayed(PROMPT_INTERVAL);
+        tPromptPrinter.setOnEnable(&printUnknownCode);
+        tPromptPrinter.setOnDisable(&restartCallBack);
+        tPromptPrinter.setTimeout(2 * TASK_SECOND);
         OperationLogs oplogs = {String(GLOBAL_STATE), sioResponse.VALUE};
         saveOperationLogs(oplogs);
+        tPromptPrinter.restart();
       } else {
         // WILL UPDATE ACTIVE CELL INDEX VALUE
         updateActiveCellIndex(sioResponse.VALUE);
@@ -263,6 +273,7 @@ void handleSIOResponse(uint8_t * response_payload) {
         tAwaitDocumentReceive.restart();
         OperationLogs oplogs = {String(GLOBAL_STATE), sioResponse.VALUE};
         saveOperationLogs(oplogs);
+        saveRxData(); // log verified rx data code
         saveActiveCellIndex();
       }
     }
