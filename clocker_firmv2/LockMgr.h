@@ -18,7 +18,7 @@ Shift165N btnHandler;
 // this function is under the TaskCallBack
 bool compare(const char *al1, const char *);
 
-uint8_t detectorValue = 0; // use in sensing little changes in device door states
+uint8_t detectorValue; // use in sensing little changes in device door states
 
 void initLocks() {
   zv_addresser.demuxInit();

@@ -123,8 +123,8 @@ void awaitDoorToOpen() {
   }
   // WAIT FOR THE ACTIVE CELL TO OPEN
   // second argument is 1 since we are sure that the cell is awaiting oeen state
-  bool actionState = lockStateManager((ACTIVE_CELL_INDEX + 1), 1);
-  if (actionState && btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 0) {
+  lockStateManager((ACTIVE_CELL_INDEX + 1), 1);
+  if (btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 0) {
     OperationLogs oplogs = {String(GLOBAL_STATE), SOCKET_RESPONSE_PAYLOADS.ok};
     saveOperationLogs(oplogs);
     tAwaitDoorOpening.delay(2 * TASK_SECOND);
@@ -149,16 +149,44 @@ bool beforeAwaitDoorToClose() {
   return true;
 }
 
+bool isDetected = false;
+unsigned long initTime = 0;
+unsigned long MAX_DOOR_HOLD_TIME = 3000;
+bool wasNotPrinted = true;
+
 void awaitDoorToClose() {
   // WAIT FOR THE ACTIVE CELL TO CLOSE
-  // second argument is zero since we are sure that the cell is awaiting lock state
-  bool actionState = lockStateManager((ACTIVE_CELL_INDEX + 1), btnHandler.evaluateBits(ACTIVE_CELL_INDEX));
-  if (actionState && btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 1) {
-    btnHandler.updateOldVal(); // call update to catch new state
-    // stop the tasl
-    Serial.print(ACTIVE_CELL_INDEX);
-    Serial.println(" WAS CLOSED");
-    tAwaitDoorClosing.disable();
+  // check if the limit switch is pressed
+  // if pressed detect pressing for 3 seconds if more than 3 sec initiate locking sequence
+
+  if (btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 1) {
+    if (!isDetected) {
+      printNorm("Please hold the", 0, 0, true);
+      printNorm("door for 3 sec.", 0, 1, false);
+      initTime = millis();
+      Serial.println(initTime);
+      isDetected = true;
+      wasNotPrinted = true;
+    }
+    if ((initTime + MAX_DOOR_HOLD_TIME) < millis() && lockStateManager((ACTIVE_CELL_INDEX + 1), 0)) { //< more than 4 sec
+      btnHandler.updateOldVal(); // call update to catch new state
+      Serial.println(millis());
+      // if more than 4 seconds
+      Serial.println("--- HOLD FOR 4 SEC ---");
+      // stop the tasl
+      Serial.print(ACTIVE_CELL_INDEX);
+      Serial.println(" WAS CLOSED");
+      initTime = 0;
+      isDetected = false;
+      tAwaitDoorClosing.disable();
+    }
+  } else {
+    if (wasNotPrinted) {
+      printPleaseCloseTheDoor();
+      wasNotPrinted = false;
+    }
+    initTime = 0;
+    isDetected = false;
   }
 }
 
@@ -191,6 +219,7 @@ void notifyCellIsFree() {
 }
 
 void afterNotifyCellIsFree() {
+  detectorValue = btnHandler.getNewVal(); // uodate detector value
   printThankYou();
   delay(3000);
   // initiate another scan routine acceptance
@@ -248,6 +277,16 @@ void handleSIOResponse(uint8_t * response_payload) {
     };
     String event = eventBuilder(SOCKET_EVENT_TYPES.pong, my_payloads, 1);
     io.sendEVENT(event);
+  }
+
+  // reboot command
+  if (compare(sioResponse.RESPONSE_TYPE, SOCKET_RESPONSE_TYPES.reboot)) {
+    if (compare(sioResponse.VALUE, "1")) {
+      printNorm("The device will", 0, 0, true);
+      printNorm("restart...", 0, 1, false);
+      delay(1000);
+      restartMachine(2000);
+    }
   }
 
   if (compare(sioResponse.RESPONSE_TYPE, SOCKET_RESPONSE_TYPES.verify)) {
