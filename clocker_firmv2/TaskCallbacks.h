@@ -123,8 +123,8 @@ void awaitDoorToOpen() {
   }
   // WAIT FOR THE ACTIVE CELL TO OPEN
   // second argument is 1 since we are sure that the cell is awaiting oeen state
-  bool actionState = lockStateManager((ACTIVE_CELL_INDEX + 1), 1);
-  if (actionState && btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 0) {
+  lockStateManager((ACTIVE_CELL_INDEX + 1), 1);
+  if (btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 0) {
     OperationLogs oplogs = {String(GLOBAL_STATE), SOCKET_RESPONSE_PAYLOADS.ok};
     saveOperationLogs(oplogs);
     tAwaitDoorOpening.delay(2 * TASK_SECOND);
@@ -191,6 +191,7 @@ void notifyCellIsFree() {
 }
 
 void afterNotifyCellIsFree() {
+  detectorValue = btnHandler.getNewVal(); // uodate detector value 
   printThankYou();
   delay(3000);
   // initiate another scan routine acceptance
@@ -248,6 +249,16 @@ void handleSIOResponse(uint8_t * response_payload) {
     };
     String event = eventBuilder(SOCKET_EVENT_TYPES.pong, my_payloads, 1);
     io.sendEVENT(event);
+  }
+
+  // reboot command
+  if(compare(sioResponse.RESPONSE_TYPE, SOCKET_RESPONSE_TYPES.reboot)){
+    if(compare(sioResponse.VALUE, "1")){
+      printNorm("The device will", 0, 0, true);
+      printNorm("restart...", 0, 1, false);
+      delay(1000);
+      restartMachine(2000);
+    }
   }
 
   if (compare(sioResponse.RESPONSE_TYPE, SOCKET_RESPONSE_TYPES.verify)) {

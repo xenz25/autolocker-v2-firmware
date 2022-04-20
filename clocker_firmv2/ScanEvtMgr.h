@@ -6,9 +6,9 @@ HardwareSerial QRSerial(2);
 
 AceButton irBtn;
 
-bool canStartQRScanning = true;
-bool isForEvaluation = false;
-bool isCodeFailedCatch = false;
+bool canStartQRScanning;
+bool isForEvaluation;
+bool isCodeFailedCatch;
 
 void handleEvent(AceButton*, uint8_t, uint8_t);
 
@@ -33,6 +33,10 @@ void initScanner() {
 }
 
 bool enableScanningEvent() {
+  if(tDisplayWaitingCode.isFirstIteration()){
+    tSendDoorStateToServer.restart();
+    tCheckIRState.restart();
+  }
   Serial.println("ACTIVATING SCANNING EVENT");
   GLOBAL_STATE = 0;
   ACTIVE_CELL_INDEX = NON_SELECTABLE_ADDRESS;

@@ -37,6 +37,7 @@ struct SocketResponseTypes {
   const char * assign = "ASSIGN";
   const char * ping = "PING";
   const char * updateToFree = "UPDATE_TO_FREE_RESPONSE";
+  const char * reboot = "REBOOT";
 } SOCKET_RESPONSE_TYPES;
 
 struct SocketPayloads {
@@ -66,3 +67,8 @@ struct OperationLogs {
   String GLOBAL_STATE;
   String VALUE;
 };
+
+struct DeviceModes {
+  int devMode = 1;
+  int normMode = 0;
+} DEVICE_MODES;

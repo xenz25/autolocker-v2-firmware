@@ -9,6 +9,7 @@ const char * CRD_PASS = "/pass.txt";
 const char * OP_LOGS = "/opLogs.txt";
 const char * ACTIVE_C_INDEX = "/cellIdx.txt";
 const char * RX_DATA_FILE = "/verifiedRxData.txt";
+const char * MODEX = "/modex.txt"; // allow us to run device in normal and dev mode
 
 // SOCKET ARGS
 const char * SOCK_CONFIG = "/sockConfig.txt";
@@ -135,4 +136,12 @@ String getSavedRxData(){
 bool saveRxData(){
   bool result = writeFile(SD_MMC, RX_DATA_FILE, RX_DATA.c_str());
   return result;
+}
+
+int getModex(){
+  String modeState = readFile(SD_MMC, MODEX);
+  if(modeState != NULL_RTR){
+    return modeState.toInt();
+  }
+  return DEVICE_MODES.normMode; // normal mode
 }

@@ -1,7 +1,9 @@
 
 uint8_t GLOBAL_STATE; // no value by default
+uint8_t ACTIVE_DOOR_FOR_CHECK = 0;
 
 void startNormalTask();
+void normalStart();
 void restartMachine(unsigned long);
 
 #define _TASK_TIMEOUT
@@ -49,19 +51,23 @@ void showGrabYourDocuments();
 void afterTaskShowGrabDocs();
 void checkWifiAndReconnect();
 
+// for checking doors state
+void doorChecker();
+
 // found in scan event manager
 bool enableScanningEvent();
 void disableScanningEvent();
 
 // HIGHER PRIORITY TASKS
-Task tSendDoorStateToServer(2 * TASK_MILLISECOND, TASK_FOREVER, &sendDoorStateToServer, &hpr, true);
-Task tCheckIRState(5 * TASK_MILLISECOND, TASK_FOREVER, &checkIRState, &hpr, true);
+Task tSendDoorStateToServer(2 * TASK_MILLISECOND, TASK_FOREVER, &sendDoorStateToServer, &hpr, false);
+Task tCheckIRState(5 * TASK_MILLISECOND, TASK_FOREVER, &checkIRState, &hpr, false);
 Task tSocketConnection(5 * TASK_MILLISECOND, TASK_FOREVER, &socketConnection, &hpr, true);
 Task tCheckDoorStates(5 * TASK_MILLISECOND, TASK_FOREVER, &checkDoorStates, &hpr, true);
 Task tCheckWifiState(3 * TASK_SECOND, TASK_FOREVER, &checkWifiAndReconnect, &hpr, true);
 
 // add TASK HERE THAT CHECK DOOR STATE AND UPDATE SERVER
 // LEAST PRIORITY TASKS
+Task tStartCheckDoor(500 * TASK_MILLISECOND, TASK_FOREVER, &doorChecker, &sc, false);
 Task tAwaitAssignToServer(5 * TASK_SECOND, TASK_FOREVER, &awaitAssignToServer, &sc, false, NULL, &afterAssignToServer);
 Task tDisplayWaitingCode(TASK_IMMEDIATE, TASK_FOREVER, NULL, &sc, false, &enableScanningEvent, &disableScanningEvent);
 Task tScanRoutine(TASK_IMMEDIATE, TASK_FOREVER, &startScanRoutine, &sc, false, NULL, &afterScanning);
@@ -117,7 +123,7 @@ void setup() {
     printNorm("Preparing...", 0, 0, true);
 
     // WEB SOCKET CONNECTION
-    initWebSocketConnection();
+    ESTABLISH_WEB_SOCKET_CONNECTION();
 
     // set high priority task scheduler
     sc.setHighPriorityScheduler(&hpr);
@@ -199,12 +205,59 @@ void afterAssignToServer() {
 }
 
 void startNormalTask() {
-  Serial.println("NO PENDING OPERATIONS WORKING TREE IS CLEAN!");
+  Serial.println("NO PENDING OPERATIONS OP LOGS IS CLEAN!");
   GLOBAL_STATE = 0;
+  // PERFORM DOOR CHECK HERE
+  if (!btnHandler.areCellsClosed()) {
+    // perform door check task
+    tStartCheckDoor.restart();
+  } else {
+    normalStart();
+  }
+}
+
+void normalStart() {
+  Serial.println("---- NORMAL START STARTED ----");
   printNorm("Locker is", 0, 0, true);
   printNorm("ready...", 0, 1, false);
   delay(PROMPT_INTERVAL);
   tDisplayWaitingCode.restart();
+}
+
+bool wasPrinted = false;
+
+// this is responsible for guiding the admin if ever we are on normal state but some doors are opened
+void doorChecker() {
+  if (btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_DOOR_FOR_CHECK) == 0) {
+    Serial.println("WAITING DOOR CLOSE");
+    // door is open await till user pressed
+    if (!wasPrinted) {
+      printNorm("Please close", 0, 0, true);
+      String toPrint = "Cell door: ";
+      toPrint.concat((ACTIVE_DOOR_FOR_CHECK + 1));
+      printNorm(toPrint.c_str(), 0, 1, false);
+      wasPrinted = true;
+    }
+  } else {
+    Serial.println("DOOR WAS CLOSED");
+    lockStateManager((ACTIVE_DOOR_FOR_CHECK + 1), 0); // <- for closing
+    printPleaseWait();
+    // send new state to server <--
+    btnHandler.updateOldVal();
+    Serial.print(ACTIVE_DOOR_FOR_CHECK);
+    Serial.println(" WAS CLOSED");
+    wasPrinted = false;
+    ACTIVE_DOOR_FOR_CHECK++; // increment door active indec
+    if (ACTIVE_DOOR_FOR_CHECK >= MAX_CELL_COUNT) {
+      detectorValue = btnHandler.getNewVal(); // update detector value
+      //send new door state to server
+      ACTIVE_DOOR_FOR_CHECK = 0;
+      tStartCheckDoor.disable();
+      normalStart();
+    } else {
+      tStartCheckDoor.restartDelayed(3 * TASK_SECOND);
+    }
+  }
 }
 
 // placed under high priority scheduler
@@ -226,6 +279,8 @@ void checkDoorStates() {
 void sendDoorStateToServer() {
   // update server whenever state changes
   if (detectorValue != btnHandler.getNewVal()) {
+    Serial.println(detectorValue);
+    Serial.println(btnHandler.getNewVal());
     // to verify compromised event
     //    /CHANGE_ACTION_FLAG != CHANGE_ACTION_FLAG_TYPE.defaultValue
     if (CHANGE_ACTION_FLAG == CHANGE_ACTION_FLAG_TYPE.defaultValue) { // check if update or compromised

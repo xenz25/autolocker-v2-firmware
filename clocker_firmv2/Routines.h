@@ -16,6 +16,14 @@ RoutinePayload START_WIFI_CONFIG_ROUTINE() {
     printNorm("Connecting...", 0, 0, true);
     lcdMakeBlink();
 
+    // read device mode
+    GLOBAL_DEVICE_MODE = getModex();
+    Serial.println(GLOBAL_DEVICE_MODE);
+    if(GLOBAL_DEVICE_MODE == DEVICE_MODES.devMode){
+        horAPrint("RUNNING", 0);
+        horAPrint("DEV MODE", 1);
+    }
+    
     // --- READ CREDENTIALS --- //
     WFCredentials cred = getCredentials();
     bool hasWifiCred = hasCredentials(cred);
@@ -47,20 +55,18 @@ RoutinePayload START_WIFI_CONFIG_ROUTINE() {
 RoutinePayload GATHER_SOCKET_REQUIREMENTS() {
   RoutinePayload payload;
   if (WiFi.status() == WL_CONNECTED) {
-    printNorm("Connecting", 0, 0, true);
-    printNorm("to server...", 0, 1, false);
+    printConnectingToServer();
     lcdMakeBlink();
     delay(PROMPT_INTERVAL);
 
     int connectAtempt = 0;
     bool wasAdded = false;
     while (!wasAdded) {
-      printNorm("Connecting", 0, 0, true);
-      printNorm("to server...", 0, 1, false);
+      printConnectingToServer();
       wasAdded = checkRequirements();
       if (connectAtempt++ > 5 || wasAdded) break; // 5 attempts at 5 sec interval
       delay(5000);
-      printNorm("Retrying...", 0, 0, true);
+      printRetrying();
       delay(PROMPT_INTERVAL);
     }
     if (!wasAdded) {
@@ -77,6 +83,6 @@ RoutinePayload GATHER_SOCKET_REQUIREMENTS() {
   return payload;
 }
 
-RoutinePayload ESTABLISH_WEB_SOCKET_CONNECTION(){
-  
+void ESTABLISH_WEB_SOCKET_CONNECTION(){
+  initWebSocketConnection();
 }

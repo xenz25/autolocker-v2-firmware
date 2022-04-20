@@ -1,3 +1,4 @@
+#define HAS_SSL
 #include <WebSocketsClient.h>
 #include <SocketIOclient.h>
 #include <ArduinoJson.h>
@@ -71,12 +72,13 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 
 void initWebSocketConnection() {
   SocketArgs socketArgs = getSocketConfig();
-  Serial.println(socketArgs.address);
-  Serial.println(socketArgs.port);
-  Serial.println(socketArgs.url);
+  bool isDevActive = GLOBAL_DEVICE_MODE == DEVICE_MODES.devMode;
+  String host = isDevActive ? "192.168.100.57" : socketArgs.address;
+  long int port = isDevActive ? 3000 : socketArgs.port;
+  const char * route = "/socket.io/?EIO=4";
 
   // INIT CONNECTION
-  io.begin("192.168.100.57", socketArgs.port, socketArgs.url);
+  io.begin(host, port, route);
   io.onEvent(socketIOEvent);
   io.setReconnectInterval(5000);
 }

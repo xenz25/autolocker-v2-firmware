@@ -137,6 +137,17 @@ void printThankYou() {
   printNorm("Good luck today!", 0, 1, false);
 }
 
+void printConnectingToServer() {
+  printNorm("Connecting", 0, 0, true);
+  printNorm("to server...", 0, 1, false);
+  lcdMakeBlink();
+}
+
+void printRetrying() {
+  printNorm("Retrying...", 0, 0, true);
+  lcdMakeBlink();
+}
+
 void printLastPrompt() {
   switch (LAST_PRINTED_CODE) {
     case 0:
