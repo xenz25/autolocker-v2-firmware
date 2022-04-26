@@ -151,7 +151,7 @@ bool beforeAwaitDoorToClose() {
 
 bool isDetected = false;
 unsigned long initTime = 0;
-unsigned long MAX_DOOR_HOLD_TIME = 3000;
+unsigned long MAX_DOOR_HOLD_TIME = 2000;
 bool wasNotPrinted = true;
 
 void awaitDoorToClose() {
@@ -162,7 +162,7 @@ void awaitDoorToClose() {
   if (btnHandler.getBitValue(btnHandler.getNewVal(), ACTIVE_CELL_INDEX) == 1) {
     if (!isDetected) {
       printNorm("Please hold the", 0, 0, true);
-      printNorm("door for 3 sec.", 0, 1, false);
+      printNorm("door for 4 sec.", 0, 1, false);
       initTime = millis();
       Serial.println(initTime);
       isDetected = true;
@@ -200,28 +200,28 @@ bool beforeNotifyCellIsFree() {
   GLOBAL_STATE = 5;
   OperationLogs oplogs = {String(GLOBAL_STATE), SOCKET_RESPONSE_PAYLOADS.fail };
   saveOperationLogs(oplogs);
-  printPleaseWait();
+//  printPleaseWait();
+  printThankYou();
   return true;
 }
 
 void notifyCellIsFree() {
   // NOTIFY THE SERVER
-  if (!isServerNotifiedCellIsFree) {
-    Dictionary my_payloads[] = {
-      {"type", SOCKET_MSG_TYPES.updateToFree},
-      {"name", LOCKER_NAME},
-      {"auth", LOCKER_AUTH_KEY},
-      {"cellNum", String(ACTIVE_CELL_INDEX + 1)}
-    };
-    String event = eventBuilder(SOCKET_EVENT_TYPES.message, my_payloads, 4);
-    io.sendEVENT(event);
-  }
+  //  if (!isServerNotifiedCellIsFree) {
+  //
+  //  }
+  Dictionary my_payloads[] = {
+    {"type", SOCKET_MSG_TYPES.updateToFree},
+    {"name", LOCKER_NAME},
+    {"auth", LOCKER_AUTH_KEY},
+    {"cellNum", String(ACTIVE_CELL_INDEX + 1)}
+  };
+  String event = eventBuilder(SOCKET_EVENT_TYPES.message, my_payloads, 4);
+  io.sendEVENT(event);
 }
 
 void afterNotifyCellIsFree() {
   detectorValue = btnHandler.getNewVal(); // uodate detector value
-  printThankYou();
-  delay(3000);
   // initiate another scan routine acceptance
   tDisplayWaitingCode.restartDelayed(3 * TASK_SECOND); // 3 second waiting for new scan events
 }

@@ -10,6 +10,7 @@ const char * OP_LOGS = "/opLogs.txt";
 const char * ACTIVE_C_INDEX = "/cellIdx.txt";
 const char * RX_DATA_FILE = "/verifiedRxData.txt";
 const char * MODEX = "/modex.txt"; // allow us to run device in normal and dev mode
+const char * LOCAL_CONFIG = "/localConfig.txt";
 
 // SOCKET ARGS
 const char * SOCK_CONFIG = "/sockConfig.txt";
@@ -143,5 +144,12 @@ int getModex(){
   if(modeState != NULL_RTR){
     return modeState.toInt();
   }
-  return DEVICE_MODES.normMode; // normal mode
+  return DEVICE_MODES.globalMode; // normal mode
+}
+
+SocketArgs getLocalConfig() {
+  String configText = readFile(SD_MMC, LOCAL_CONFIG);
+  StringSplitter *st = new StringSplitter(configText, ',', 2);
+  SocketArgs sockArgs = {st->getItemAtIndex(0), atol(st->getItemAtIndex(1).c_str()), "/" };
+  return sockArgs;
 }

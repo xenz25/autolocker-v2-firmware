@@ -72,10 +72,12 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 
 void initWebSocketConnection() {
   SocketArgs socketArgs = getSocketConfig();
-  bool isDevActive = GLOBAL_DEVICE_MODE == DEVICE_MODES.devMode;
-  String host = isDevActive ? "192.168.100.57" : socketArgs.address;
-  long int port = isDevActive ? 3000 : socketArgs.port;
+  String host = socketArgs.address;
+  long int port = socketArgs.port;
   const char * route = "/socket.io/?EIO=4";
+
+  Serial.println(host);
+  Serial.println(port);
 
   // INIT CONNECTION
   io.begin(host, port, route);

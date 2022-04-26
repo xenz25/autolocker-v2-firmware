@@ -2,8 +2,7 @@
 const char * LOCKER_NAME = "AUTO-LOCKER-V1.0.0";
 const char * LOCKER_AUTH_KEY = "zxGFH79aKJBTeh2c";
 const uint8_t MAX_CELL_COUNT = 5;
-const char * HTTP_RQ_PATH_DEV = "http://192.168.100.57:3000/locker/get-requirements";
-const char * HTTP_RQ_PATH = "https://sanpedronline.herokuapp.com/locker/get-requirements";
+
 
 const unsigned long PROMPT_INTERVAL = 2000;
 signed int RECEIVING_DOCUMENT_TIMEOUT = 100;

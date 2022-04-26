@@ -18,12 +18,12 @@ RoutinePayload START_WIFI_CONFIG_ROUTINE() {
 
     // read device mode
     GLOBAL_DEVICE_MODE = getModex();
-    Serial.println(GLOBAL_DEVICE_MODE);
-    if(GLOBAL_DEVICE_MODE == DEVICE_MODES.devMode){
-        horAPrint("RUNNING", 0);
-        horAPrint("DEV MODE", 1);
+    if (GLOBAL_DEVICE_MODE == DEVICE_MODES.localMode) { // === 1
+      Serial.println("LOCAL MODE IS ACTIVE");
+    } else {
+      Serial.println("SERVER MODE IS ACTIVE");
     }
-    
+
     // --- READ CREDENTIALS --- //
     WFCredentials cred = getCredentials();
     bool hasWifiCred = hasCredentials(cred);
@@ -83,6 +83,6 @@ RoutinePayload GATHER_SOCKET_REQUIREMENTS() {
   return payload;
 }
 
-void ESTABLISH_WEB_SOCKET_CONNECTION(){
+void ESTABLISH_WEB_SOCKET_CONNECTION() {
   initWebSocketConnection();
 }

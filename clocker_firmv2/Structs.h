@@ -69,6 +69,6 @@ struct OperationLogs {
 };
 
 struct DeviceModes {
-  int devMode = 1;
-  int normMode = 0;
+  int localMode = 1;// WILL TAKE EFFECT ON HTTP AND SOCKET CONFIGUTRATION
+  int globalMode = 0;
 } DEVICE_MODES;
