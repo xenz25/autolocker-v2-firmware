@@ -7,8 +7,8 @@ void startScanRoutine() {
   if (tScanRoutine.isFirstIteration()) {
     // you can disable other non important task here
     printReadingYourCode();
+//    Serial.println("TASK SCANNING IS RUNNING");
   }
-  //  Serial.println("TASK SCANNING IS RUNNING");
   while (QRSerial.available()) {
     RX_DATA = QRSerial.readStringUntil('\n');
     RX_DATA = RX_DATA.substring(0, RX_DATA.length() - 1);
